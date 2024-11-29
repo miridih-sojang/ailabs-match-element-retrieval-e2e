@@ -1,0 +1,5 @@
+path:
+  test_dataset: '/data/match_element_retrieval/element_to_element/data/csv/test_dataset.csv'
+  total_dataset: '/data/match_element_retrieval/element_to_element/data/csv/total_dataset.csv'
+  search_test_dataset: '/data/match_element_retrieval/element_to_element/data/csv/search_test_dataset.csv'
+  image_path: '/data/s3_dataset/collection_element_dataset'

@@ -1,0 +1,8 @@
+#name: 'BLIP-V2'
+#trained_path: '/data/match_element_retrieval/element_to_element/trained_model_weights/BLIP-V2_256_Vector'
+#logit_scale_init_value: 2.6592
+
+
+name: 'Alpha-BLIP-V2'
+trained_path: '/data/match_element_retrieval/template_to_element/trained_model_weights/taehoon_miridih_alpha-blip-v2_256'
+logit_scale_init_value: 2.6592

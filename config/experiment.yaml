@@ -1,0 +1,13 @@
+#exp_name: 'Eval_E2E-BLIP-V2_256_Vector'
+#save_path: '/data/match_element_retrieval/element_to_element/evaluation'
+#scenario_1: 'Use'
+#scenario_2: 'Use'
+#scenario_3: 'Not_Use'
+
+
+
+exp_name: 'Eval_T2E_Alpha-BLIP-V2_256_Vector'
+save_path: '/data/match_element_retrieval/element_to_element/evaluation'
+scenario_1: 'Use'
+scenario_2: 'Use'
+scenario_3: 'Not_Use'

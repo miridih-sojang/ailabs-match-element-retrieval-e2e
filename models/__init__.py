@@ -1,2 +1,3 @@
 from .efficientnet_dual_model import EfficientNetDualModel
 from .blip_v2_dual_model import BlipV2DualModel
+from .alpha_blip_v2_dual_model import AlphaBlipV2DualModel

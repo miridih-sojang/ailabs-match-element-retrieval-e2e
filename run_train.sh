@@ -1,12 +1,10 @@
 # DDP
-export OMP_NUM_THREADS=32
+export OMP_NUM_THREADS=24
 num_epochs=5
 num_gpu=6
 run_name=BLIP-V2_256_Vector
 
 
-# BLIP-V2 EfficientNet {16, 4} {32 16}
-# model_name_or_path google/efficientnet-b4 Salesforce/blip2-opt-2.7b
 CUDA_VISIBLE_DEVICES=0,1,2,3,5,7 torchrun --nproc_per_node $num_gpu main.py \
     --num_device $num_gpu \
     --run_name $run_name \
@@ -35,7 +33,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,5,7 torchrun --nproc_per_node $num_gpu main.py \
     --eval_strategy steps \
     --logging_steps 1 \
     --save_strategy steps \
-    --save_total_limit 2 \
+    --save_total_limit 10 \
     --load_best_model_at_end \
     --log_level info \
     --gradient_accumulation_steps 4 # > logs/$run_name.out &

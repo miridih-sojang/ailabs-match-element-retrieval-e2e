@@ -15,16 +15,14 @@ from transformers import AutoImageProcessor, HfArgumentParser, TrainingArguments
     Blip2Config, Trainer
 
 from models import EfficientNetDualModel, BlipV2DualModel
-from trainer import MiridihTrainer
-from metrics import compute_metrics
-from elements_datasets import CollectionDataset, ElementSameCollection, ElementSameCollectionWithKeyword
+from elements_datasets import CollectionDataset
 
 logger = logging.getLogger(__name__)
 
 Image.MAX_IMAGE_PIXELS = None
 
 os.environ["WANDB_PROJECT"] = "[E2E] Match-Element-Retrieval"
-os.environ["WANDB_LOG_MODEL"] = "end"  # "false"
+os.environ["WANDB_LOG_MODEL"] = "false"  # "false"
 
 
 @dataclass
@@ -157,16 +155,17 @@ class DataTrainingArguments:
 
 
 def collate_fn(examples):
-    q_image_tensor = torch.stack([example["q_image_tensor"] for example in examples])
-    c_image_tensor = torch.stack([example["c_image_tensor"] for example in examples])
+    q_image_tensor = torch.stack([example["q_image_tensor"] for example in examples])  # 1
+    c_image_tensor = torch.stack([example["c_image_tensor"] for example in examples])  # 1
 
-    search_word = [example.get("search_word", "NOT_EXISTS") for example in examples]
+    search_word = [example.get("search_word", "NOT_EXISTS") for example in examples]  #
 
-    q_collection_idx = [example.get("q_collection_idx", "NOT_EXISTS") for example in examples]
-    c_collection_idx = [example.get("c_collection_idx", "NOT_EXISTS") for example in examples]
+    q_collection_idx = [example.get("q_collection_idx", "NOT_EXISTS") for example in examples]  # 1
+    c_collection_idx = [example.get("c_collection_idx", "NOT_EXISTS") for example in examples]  # 2
 
-    q_primary_element_key = [example.get("q_primary_element_key", "NOT_EXISTS") for example in examples]
-    c_primary_element_key = [example.get("c_primary_element_key", "NOT_EXISTS") for example in examples]
+    q_primary_element_key = [example.get("q_primary_element_key", "NOT_EXISTS") for example in examples]  # 1
+    c_primary_element_key = [example.get("c_primary_element_key", "NOT_EXISTS") for example in examples]  # 1
+
     return {
         "q_image_tensor": q_image_tensor,
         "c_image_tensor": c_image_tensor,
@@ -187,7 +186,6 @@ def main():
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     training_args.report_to = ['wandb']
-    # training_args.run_name = f'Qwen2-VL-72B-Instruct_20241023'
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -232,41 +230,21 @@ def main():
 
     train_dataset = CollectionDataset(data_args.train_dataset_path, data_args.element_image_path, image_processor)
     eval_dataset = CollectionDataset(data_args.eval_dataset_path, data_args.element_image_path, image_processor)
-    test_dataset = ElementSameCollection(data_args.eval_dataset_path, data_args.test_dataset_path,
-                                         data_args.element_image_path)
-    search_test_dataset = ElementSameCollectionWithKeyword(data_args.search_test_dataset_path,
-                                                           data_args.element_image_path)
 
     if data_args.eval_ratio is not None:
         training_args.save_steps = training_args.eval_steps = round(
             (len(train_dataset) * training_args.num_train_epochs) / (
                     training_args.per_device_train_batch_size * data_args.num_device * training_args.gradient_accumulation_steps) * data_args.eval_ratio)
-    if model_args.backbone_name == 'EfficientNet':
-        element_vector = torch.load(f'{data_args.element_vector_cache_path}/efficientnet.pth', weights_only=True)
-    if model_args.backbone_name == 'BLIP-V2':
-        element_vector = None  # torch.load(f'{data_args.element_vector_cache_path}/blip_v2.pth', weights_only=True)
-
-    # trainer = MiridihTrainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=train_dataset if training_args.do_train else None,
-    #     eval_dataset=eval_dataset if training_args.do_eval else None,
-    #     test_dataset=test_dataset,
-    #     data_collator=collate_fn,
-    #     rerank_compute_metrics=compute_metrics,
-    #     element_vector=element_vector
-    # )
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        # test_dataset=test_dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         data_collator=collate_fn,
-        # rerank_compute_metrics=compute_metrics,
-        # element_vector=element_vector
     )
     train_result = trainer.train()
+    trainer.save_model(training_args.output_dir)
+    image_processor.save_pretrained(training_args.output_dir)
 
 
 if __name__ == "__main__":

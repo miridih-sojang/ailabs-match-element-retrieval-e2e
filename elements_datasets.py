@@ -23,20 +23,33 @@ class CollectionDataset(torch.utils.data.Dataset):
         candidate_collection_idx, candidate_primary_element_key, candidate_file_path = candidate_df['collection_idx'], \
             candidate_df['primary_element_key'], candidate_df['file_path']
 
-        query_image = self.read_image(query_file_path)
-        candidate_image = self.read_image(candidate_file_path)
-        query_image_tensor = self.image_processor(query_image, return_tensors='pt')['pixel_values'][0]
-        candidate_image_tensor = self.image_processor(candidate_image, return_tensors='pt')['pixel_values'][0]
+        query_image, query_alpha_image = self.read_image(query_file_path)
+        candidate_image, candidate_alpha_image = self.read_image(candidate_file_path)
+
+        query_image_tensor = self.image_processor['processor'](query_image, return_tensors='pt')['pixel_values'][0]
+        candidate_image_tensor = self.image_processor['processor'](candidate_image, return_tensors='pt')['pixel_values'][0]
+
+        if self.image_processor.get('alpha_processor', None) != None:
+            query_alpha_image_tensor = self.image_processor['alpha_processor'](query_alpha_image)
+            candidate_alpha_image_tensor = self.image_processor['alpha_processor'](candidate_alpha_image)
+        else:
+            query_alpha_image_tensor = -100
+            candidate_alpha_image_tensor = -100
+
         return {'q_image_tensor': query_image_tensor,
+                'q_alpha_image_tensor': query_alpha_image_tensor,
                 'q_collection_idx': query_collection_idx,
                 'q_primary_element_key': query_primary_element_key,
                 'c_image_tensor': candidate_image_tensor,
+                'c_alpha_image_tensor': candidate_alpha_image_tensor,
                 'c_primary_element_key': candidate_primary_element_key}
 
     def read_image(self, path):
         img = Image.open(f'{self.image_path}/{path}')
+        img = img.convert('RGBA')
+        alpha_img = img.split()[-1]
         img = img.convert('RGB')
-        return img
+        return img, alpha_img
 
     def __len__(self):
         return self.df.shape[0]
@@ -50,7 +63,7 @@ class CollectionCacheDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         df = self.df.iloc[idx]
-        primary_element_key, collection_idx, file_path = df['primary_element_key'], df['collection_idx'], df[
+        primary_element_key, collection_idx, file_path = df['primary_element_key'], df.get('collection_idx', -100), df[
             'file_path']
         img, alpha_img = self.read_image(file_path)
         img = self.image_processor['processor'](img, return_tensors='pt')['pixel_values'][0]

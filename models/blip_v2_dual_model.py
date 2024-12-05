@@ -99,6 +99,6 @@ class BlipV2DualModel(Blip2Model):
             last_hidden_state = self.vision_model.post_layernorm(last_hidden_state)
             pooled_output = last_hidden_state[:, 0, :]
             image_embedding = self.vision_model.post_layernorm(pooled_output)
-            image_embedding = self.reducenet(image_embedding)
+            # image_embedding = self.reducenet(image_embedding)
             image_embedding = image_embedding / image_embedding.norm(p=2, dim=-1, keepdim=True)
-            return image_embedding
+            return image_embedding[:, :128]

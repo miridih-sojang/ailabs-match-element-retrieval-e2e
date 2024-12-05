@@ -2,14 +2,14 @@
 export OMP_NUM_THREADS=24
 num_epochs=5
 num_gpu=6
-run_name=BLIP-V2_256_Vector
+run_name=Alpha-BLIP-V2_256_Vector
 
 
 CUDA_VISIBLE_DEVICES=0,1,2,3,5,7 torchrun --nproc_per_node $num_gpu main.py \
     --num_device $num_gpu \
     --run_name $run_name \
     --output_dir /data/match_element_retrieval/element_to_element/trained_model_weights/$run_name \
-    --backbone_name BLIP-V2 \
+    --backbone_name Alpha-BLIP-V2 \
     --element_vector_cache_path /data/match_element_retrieval/element_to_element/cache/search_dataset/element \
     --model_name_or_path Salesforce/blip2-opt-2.7b \
     --train_dataset_path /data/match_element_retrieval/element_to_element/data/csv/train_dataset.csv \

@@ -3,3 +3,7 @@ path:
   total_dataset: '/data/match_element_retrieval/element_to_element/data/csv/total_dataset.csv'
   search_test_dataset: '/data/match_element_retrieval/element_to_element/data/csv/search_test_dataset.csv'
   image_path: '/data/s3_dataset/collection_element_dataset'
+
+  user_log_dataset: '/data/match_element_retrieval/element_to_element/data/csv/user_log_data.csv'
+  user_log_elements_dataset: '/data/match_element_retrieval/element_to_element/data/csv/use_log_elements_dataset.csv'
+  user_log_image_path: '/data/match_element_retrieval/element_to_element/data/images/user_data_log'

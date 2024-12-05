@@ -76,7 +76,6 @@ def main():
             img = img.cuda()
             if processor_fuc['alpha_processor'] != None:
                 alpha_img = alpha_img.cuda()
-            if processor_fuc['alpha_processor'] != None:
                 embeddings = model.inference_image(img, alpha_img).cpu().detach().numpy()
             else:
                 embeddings = model.inference_image(img).cpu().detach().numpy()
@@ -138,6 +137,65 @@ def main():
                                                          'c_key_list', 'c_score_list', 'c_collection_list'])
         scenario_2_prediction_df.to_csv(
             f'{experiment_config["save_path"]}/{experiment_config["exp_name"]}/scenario_2_prediction.csv', index=False)
+
+    if experiment_config['scenario_3'] == 'Use':
+        element_cache_dataset = CollectionCacheDataset(dataset_config['path']['user_log_elements_dataset'],
+                                                       dataset_config['path']['user_log_image_path'],
+                                                       processor_fuc)
+        element_cache_dataloader = DataLoader(element_cache_dataset, batch_size=256, num_workers=8, shuffle=False,
+                                              drop_last=False)
+        element_vector_cache = {}
+        for batch in tqdm(element_cache_dataloader):
+            img, alpha_img, primary_element_key, collection_idx = batch
+            img = img.cuda()
+            if processor_fuc['alpha_processor'] != None:
+                alpha_img = alpha_img.cuda()
+                embeddings = model.inference_image(img, alpha_img).cpu().detach().numpy()
+            else:
+                embeddings = model.inference_image(img).cpu().detach().numpy()
+            for embedding, p_e_k in zip(embeddings, primary_element_key):
+                if element_vector_cache.get(p_e_k, None) is None:
+                    element_vector_cache[p_e_k] = embedding
+
+        user_log_df = pd.read_csv(dataset_config['path']['user_log_dataset'])
+
+        user_log_df['a_elements_idx'] = user_log_df['a_elements_idx'].apply(lambda x: eval(x))
+        user_log_df['a_elements_type'] = user_log_df['a_elements_type'].apply(lambda x: eval(x))
+        user_log_df['a_elements_bm25_score'] = user_log_df['a_elements_bm25_score'].apply(lambda x: eval(x))
+        user_log_df['a_elements_vector_score'] = user_log_df['a_elements_vector_score'].apply(lambda x: eval(x))
+        user_log_df['a_elements_path'] = user_log_df['a_elements_path'].apply(lambda x: eval(x))
+        user_log_df['c_elements_idx'] = user_log_df['c_elements_idx'].apply(lambda x: eval(x))
+        user_log_df['c_elements_type'] = user_log_df['c_elements_type'].apply(lambda x: eval(x))
+        user_log_df['c_elements_bm25_score'] = user_log_df['c_elements_bm25_score'].apply(lambda x: eval(x))
+        user_log_df['c_elements_vector_score'] = user_log_df['c_elements_vector_score'].apply(lambda x: eval(x))
+        user_log_df['c_elements_path'] = user_log_df['c_elements_path'].apply(lambda x: eval(x))
+
+        scenario_3_predictions = []
+        for search_word, q_element_idx, q_element_type, c_element_idx, c_element_type in tqdm(user_log_df[
+                                                                                                  ['search_word',
+                                                                                                   'q_element_idx',
+                                                                                                   'q_element_type',
+                                                                                                   'c_elements_idx',
+                                                                                                   'c_elements_type']].values):
+            q_primary_element_key = f'{q_element_idx}-{q_element_type}'
+            score_list = []
+            c_key_list = []
+            for ins_c_element_idx, ins_c_element_type in zip(c_element_idx, c_element_type):
+                c_primary_element_key = f'{ins_c_element_idx}-{ins_c_element_type}'
+                if q_primary_element_key == c_primary_element_key:
+                    continue
+                else:
+                    score_list.append(
+                        cosine_similarity(element_vector_cache[q_primary_element_key],
+                                          element_vector_cache[c_primary_element_key]))
+                    c_key_list.append(c_primary_element_key)
+            scenario_3_predictions.append(
+                [search_word, q_primary_element_key, c_key_list, score_list])
+        scenario_3_prediction_df = pd.DataFrame(scenario_3_predictions,
+                                                columns=['search_word', 'q_primary_element_key', 'c_key_list',
+                                                         'c_score_list'])
+        scenario_3_prediction_df.to_csv(
+            f'{experiment_config["save_path"]}/{experiment_config["exp_name"]}/scenario_3_prediction.csv', index=False)
 
 
 if __name__ == "__main__":

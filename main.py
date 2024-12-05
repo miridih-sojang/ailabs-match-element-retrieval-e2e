@@ -3,7 +3,7 @@ import sys
 import logging
 
 from PIL import Image
-import pandas as pd
+from torchvision import transforms
 
 from dataclasses import dataclass, field
 from typing import Optional
@@ -14,7 +14,7 @@ import torch
 from transformers import AutoImageProcessor, HfArgumentParser, TrainingArguments, set_seed, EfficientNetConfig, \
     Blip2Config, Trainer
 
-from models import EfficientNetDualModel, BlipV2DualModel
+from models import EfficientNetDualModel, BlipV2DualModel, AlphaBlipV2DualModel
 from elements_datasets import CollectionDataset
 
 logger = logging.getLogger(__name__)
@@ -158,6 +158,9 @@ def collate_fn(examples):
     q_image_tensor = torch.stack([example["q_image_tensor"] for example in examples])  # 1
     c_image_tensor = torch.stack([example["c_image_tensor"] for example in examples])  # 1
 
+    q_alpha_image_tensor = torch.stack([example["q_alpha_image_tensor"] for example in examples])  # 1
+    c_alpha_image_tensor = torch.stack([example["c_alpha_image_tensor"] for example in examples])  # 1
+
     search_word = [example.get("search_word", "NOT_EXISTS") for example in examples]  #
 
     q_collection_idx = [example.get("q_collection_idx", "NOT_EXISTS") for example in examples]  # 1
@@ -169,6 +172,8 @@ def collate_fn(examples):
     return {
         "q_image_tensor": q_image_tensor,
         "c_image_tensor": c_image_tensor,
+        "q_alpha_image_tensor": q_alpha_image_tensor,
+        "c_alpha_image_tensor": c_alpha_image_tensor,
         "search_word": search_word,
         "q_collection_idx": q_collection_idx,
         "c_collection_idx": c_collection_idx,
@@ -193,43 +198,40 @@ def main():
         handlers=[logging.StreamHandler(sys.stdout)],
     )
 
-    if model_args.backbone_name == 'EfficientNet':
-        config = EfficientNetConfig.from_pretrained(model_args.model_name_or_path)
-        config.projection_dim = config.hidden_dim
-        config.logit_scale_init_value = model_args.logit_scale_init_value
-
-        model = EfficientNetDualModel.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            token=model_args.token,
-            trust_remote_code=model_args.trust_remote_code,
-        )
-
-        image_processor = AutoImageProcessor.from_pretrained(
-            model_args.image_processor_name or model_args.model_name_or_path,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            token=model_args.token,
-            trust_remote_code=model_args.trust_remote_code,
-        )
-
-    elif model_args.backbone_name == 'BLIP-V2':
+    if model_args.backbone_name == 'BLIP-V2':
         config = Blip2Config.from_pretrained(model_args.model_name_or_path)
         config.logit_scale_init_value = model_args.logit_scale_init_value
 
         model = BlipV2DualModel.from_pretrained(model_args.model_name_or_path,
                                                 cache_dir=model_args.cache_dir,
                                                 config=config)
+        alpha_processor = None
+        processor = AutoImageProcessor.from_pretrained(model_args.model_name_or_path,
+                                                       cache_dir=model_args.cache_dir)
 
-        image_processor = AutoImageProcessor.from_pretrained(model_args.model_name_or_path,
-                                                             cache_dir=model_args.cache_dir)
+    elif 'Alpha' in model_args.backbone_name:
+        config = Blip2Config.from_pretrained(model_args.model_name_or_path)
+        config.logit_scale_init_value = model_args.logit_scale_init_value
+
+        model = AlphaBlipV2DualModel.from_pretrained(model_args.model_name_or_path,
+                                                     cache_dir=model_args.cache_dir,
+                                                     config=config)
+        alpha_processor = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize((224, 224)),
+            transforms.Normalize(0.5, 0.26)
+        ])
+        processor = AutoImageProcessor.from_pretrained(model_args.model_name_or_path,
+                                                       cache_dir=model_args.cache_dir)
+
+    processor_fuc = {}
+    processor_fuc['processor'] = processor
+    processor_fuc['alpha_processor'] = alpha_processor
 
     set_seed(training_args.seed)
 
-    train_dataset = CollectionDataset(data_args.train_dataset_path, data_args.element_image_path, image_processor)
-    eval_dataset = CollectionDataset(data_args.eval_dataset_path, data_args.element_image_path, image_processor)
+    train_dataset = CollectionDataset(data_args.train_dataset_path, data_args.element_image_path, processor_fuc)
+    eval_dataset = CollectionDataset(data_args.eval_dataset_path, data_args.element_image_path, processor_fuc)
 
     if data_args.eval_ratio is not None:
         training_args.save_steps = training_args.eval_steps = round(
@@ -244,7 +246,7 @@ def main():
     )
     train_result = trainer.train()
     trainer.save_model(training_args.output_dir)
-    image_processor.save_pretrained(training_args.output_dir)
+    processor_fuc['processor'].save_pretrained(training_args.output_dir)
 
 
 if __name__ == "__main__":

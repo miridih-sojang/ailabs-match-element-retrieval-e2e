@@ -5,9 +5,29 @@
 #scenario_3: 'Not_Use'
 
 
+#exp_name: 'Eval_E2E-Pretrained_BLIP-V2_1406_Vector'
+#save_path: '/data/match_element_retrieval/element_to_element/evaluation'
+#scenario_1: 'Use'
+#scenario_2: 'Use'
+#scenario_3: 'Not_Use'
 
-exp_name: 'Eval_T2E_Alpha-BLIP-V2_256_Vector'
+
+#exp_name: 'Eval_E2E-Pretrained_BLIP-V2_128_Vector'
+#save_path: '/data/match_element_retrieval/element_to_element/evaluation'
+#scenario_1: 'Use'
+#scenario_2: 'Use'
+#scenario_3: 'Not_Use'
+
+
+
+#exp_name: 'Eval_T2E_Alpha-BLIP-V2_256_Vector'
+#save_path: '/data/match_element_retrieval/element_to_element/evaluation'
+#scenario_1: 'Not_Use'
+#scenario_2: 'Not_Use'
+#scenario_3: 'Use'
+
+exp_name: 'Eval_E2E_Alpha-BLIP-V2_256_Vector'
 save_path: '/data/match_element_retrieval/element_to_element/evaluation'
-scenario_1: 'Use'
-scenario_2: 'Use'
-scenario_3: 'Not_Use'
+scenario_1: 'Not_Use'
+scenario_2: 'Not_Use'
+scenario_3: 'Use'
